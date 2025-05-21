@@ -2,12 +2,61 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ArrowUp, Globe, User, Bot, ArrowLeft, Copy } from 'lucide-react';
+import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
+import oneDark from 'react-syntax-highlighter/dist/cjs/styles/prism/one-dark';
 
 interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant';
 }
+
+// Helper function to detect code blocks
+const processMessageContent = (content: string) => {
+  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+  const parts: Array<{ type: 'text' | 'code'; content: string; language?: string }> = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    // Add text before code block
+    if (match.index > lastIndex) {
+      parts.push({
+        type: 'text',
+        content: content.slice(lastIndex, match.index)
+      });
+    }
+
+    // Add code block
+    parts.push({
+      type: 'code',
+      language: match[1] || 'plaintext',
+      content: match[2].trim()
+    });
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < content.length) {
+    parts.push({
+      type: 'text',
+      content: content.slice(lastIndex)
+    });
+  }
+
+  return parts;
+};
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (err) {
+    console.error('Failed to copy:', err);
+    return false;
+  }
+};
 
 export default function Home() {
   const [question, setQuestion] = useState('');
@@ -136,8 +185,8 @@ export default function Home() {
         {messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center">
             <div className="space-y-4 text-center mb-8">
-              <h1 className="text-4xl font-medium">What do you want to explore?</h1>
-              <p className="text-[oklch(70.8%_0_0)] text-lg">Chat with the most advanced AI models</p>
+              <h1 className="text-4xl font-medium">Fix your problems with AI</h1>
+              <p className="text-[oklch(70.8%_0_0)] text-lg">Chat with AI models until the credit runs out</p>
             </div>
             
             <div className="w-full max-w-xl">
@@ -220,14 +269,47 @@ export default function Home() {
                   )}
                 </div>
                 <div className="flex-1 space-y-2 overflow-hidden group">
-                  <div className="flex justify-between items-start gap-2">
-                    <p className="text-base leading-relaxed whitespace-pre-wrap flex-1">{message.content}</p>
+                  <div className="flex flex-col gap-2 w-full">
+                    <div className="flex-1 overflow-x-auto">
+                      {processMessageContent(message.content).map((part, index) => (
+                        part.type === 'code' ? (
+                          <div key={index} className="my-2 rounded-lg overflow-hidden relative group/code">
+                            <div className="bg-[oklch(26.9%_0_0)] px-4 py-2 text-sm text-[oklch(70.8%_0_0)] border-b border-[oklch(37.1%_0_0)] flex justify-between items-center">
+                              <span>{part.language}</span>
+                              <button
+                                onClick={() => copyToClipboard(part.content)}
+                                className="opacity-0 group-hover/code:opacity-100 transition-opacity p-1 hover:bg-[oklch(31%_0_0)] rounded"
+                                title="Copy code"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <div className="overflow-x-auto">
+                              <SyntaxHighlighter
+                                language={part.language}
+                                style={oneDark}
+                                customStyle={{
+                                  margin: 0,
+                                  background: 'oklch(26.9% 0 0)',
+                                  padding: '1rem',
+                                }}
+                              >
+                                {part.content}
+                              </SyntaxHighlighter>
+                            </div>
+                          </div>
+                        ) : (
+                          <p key={index} className="text-base leading-relaxed whitespace-pre-wrap overflow-x-auto">{part.content}</p>
+                        )
+                      ))}
+                    </div>
                     <button
                       onClick={() => handleCopyMessage(message.content, message.id)}
-                      className={`shrink-0 p-1 rounded hover:bg-[oklch(26.9%_0_0)] transition-colors ${
+                      className={`self-end shrink-0 p-1 rounded hover:bg-[oklch(26.9%_0_0)] transition-colors ${
                         copiedId === message.id ? 'text-green-500' : 'text-[oklch(70.8%_0_0)] opacity-0 group-hover:opacity-100'
                       }`}
-                      aria-label="Copy message"
+                      aria-label="Copy full message"
+                      title="Copy full message"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
