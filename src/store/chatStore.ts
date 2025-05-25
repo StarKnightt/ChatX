@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { ChatState, ChatStore, Message } from '../types/chat';
-import { StateCreator } from 'zustand';
 
 const initialState: ChatState = {
   messages: [],

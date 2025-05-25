@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@google/genai": "^0.15.0",
+    "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-dropdown-menu": "^2.1.14",
     "@radix-ui/react-scroll-area": "^1.2.8",
     "@radix-ui/react-slot": "^1.2.2",
