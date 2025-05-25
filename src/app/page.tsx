@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowUp, Globe, User, Bot, ArrowLeft, Copy, ChevronDown } from 'lucide-react';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import oneDark from 'react-syntax-highlighter/dist/cjs/styles/prism/one-dark';
@@ -17,6 +17,7 @@ interface ChatInputProps {
   isLoading: boolean;
   selectedModel: string;
   onModelSelect: (model: string) => void;
+  disabled: boolean;
 }
 
 // Helper function to detect code blocks
@@ -66,11 +67,61 @@ const copyToClipboard = async (text: string) => {
   }
 };
 
-// Move ModelSelector outside
-const ModelSelector = ({ selectedModel, onSelect, isLoading }: { 
+// Add TimeDisplay component
+const TimeDisplay = () => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-2 text-[oklch(55.6%_0_0)] text-sm">
+      <span>{formatTime(currentTime)}</span>
+      <span>•</span>
+      <span>{formatDate(currentTime)}</span>
+    </div>
+  );
+};
+
+// Add Navbar component
+const Navbar = () => {
+  return (
+    <nav className="flex items-center justify-between px-6 py-3 border-b border-[oklch(26.9%_0_0)]">
+      <div className="flex items-center gap-3">
+        <Bot className="h-6 w-6 text-[oklch(87%_0_0)]" />
+        <span className="text-lg font-medium">ChatX</span>
+      </div>
+      <TimeDisplay />
+    </nav>
+  );
+};
+
+const ModelSelector = ({ selectedModel, onSelect, isLoading, disabled }: { 
   selectedModel: string; 
   onSelect: (model: string) => void;
   isLoading: boolean;
+  disabled: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -91,6 +142,17 @@ const ModelSelector = ({ selectedModel, onSelect, isLoading }: {
     { id: 'gemini', name: 'Gemini Pro', description: 'Google\'s advanced AI model' }
   ];
 
+  const selectedModelName = models.find(m => m.id === selectedModel)?.name || 'Select Model';
+
+  if (disabled) {
+    return (
+      <div className="flex items-center gap-2 bg-[oklch(20.5%_0_0)] border border-[oklch(37.1%_0_0)] rounded-[0.625rem] pl-2 pr-3 py-1.5">
+        <Globe className="h-[18px] w-[18px] text-[oklch(70.8%_0_0)]" />
+        <span className="text-[13px] text-[oklch(70.8%_0_0)]">{selectedModelName}</span>
+      </div>
+    );
+  }
+
   return (
     <div 
       ref={dropdownRef}
@@ -104,7 +166,7 @@ const ModelSelector = ({ selectedModel, onSelect, isLoading }: {
         type="button"
       >
         <span className="text-[13px] text-[oklch(70.8%_0_0)] hover:text-[oklch(87%_0_0)] transition-colors pr-6">
-          {models.find(m => m.id === selectedModel)?.name || 'Select Model'}
+          {selectedModelName}
         </span>
         <ChevronDown 
           className={`h-4 w-4 text-[oklch(70.8%_0_0)] absolute right-0 transition-transform duration-200 ${
@@ -137,11 +199,13 @@ const ModelSelector = ({ selectedModel, onSelect, isLoading }: {
             }`}
             type="button"
           >
-            <div className="text-[13px] text-[oklch(87%_0_0)] font-medium">
-              {model.name}
-            </div>
-            <div className="text-[11px] text-[oklch(70.8%_0_0)] group-hover:text-[oklch(87%_0_0)] transition-colors">
-              {model.description}
+            <div>
+              <div className="text-[13px] text-[oklch(87%_0_0)] font-medium">
+                {model.name}
+              </div>
+              <div className="text-[11px] text-[oklch(70.8%_0_0)] group-hover:text-[oklch(87%_0_0)] transition-colors">
+                {model.description}
+              </div>
             </div>
           </button>
         ))}
@@ -150,8 +214,8 @@ const ModelSelector = ({ selectedModel, onSelect, isLoading }: {
   );
 };
 
-// Move ChatInput outside
-const ChatInput = ({ onSend, isLoading, selectedModel, onModelSelect }: ChatInputProps) => {
+// Update ChatInput to pass disabled state
+const ChatInput = ({ onSend, isLoading, selectedModel, onModelSelect, disabled }: ChatInputProps & { disabled: boolean }) => {
   const [question, setQuestion] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -212,26 +276,22 @@ const ChatInput = ({ onSend, isLoading, selectedModel, onModelSelect }: ChatInpu
       />
       
       <div className="absolute left-3 right-3 bottom-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ModelSelector 
-            selectedModel={selectedModel} 
-            onSelect={onModelSelect}
-            isLoading={isLoading}
-          />
-          <div className="flex items-center bg-[oklch(20.5%_0_0)] border border-[oklch(37.1%_0_0)] rounded-[0.625rem] px-3 py-1.5 hover:border-[oklch(43.9%_0_0)] transition-colors">
-            <span className="text-[13px] text-[oklch(70.8%_0_0)]">Extreme</span>
-          </div>
-        </div>
+        <ModelSelector 
+          selectedModel={selectedModel} 
+          onSelect={onModelSelect}
+          isLoading={isLoading}
+          disabled={disabled}
+        />
         
         <button 
           type="submit"
           disabled={isLoading || !question.trim()}
-          className={`p-1.5 rounded-[0.625rem] bg-[oklch(26.9%_0_0)] hover:bg-[oklch(37.1%_0_0)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[oklch(26.9%_0_0)] ${
+          className={`p-2 rounded-[0.625rem] bg-[oklch(26.9%_0_0)] hover:bg-[oklch(37.1%_0_0)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[oklch(26.9%_0_0)] ${
             isLoading ? 'animate-pulse-soft' : ''
           }`}
           aria-label="Send message"
         >
-          <ArrowUp className={`h-[18px] w-[18px] text-[oklch(87%_0_0)] transition-transform ${
+          <ArrowUp className={`h-5 w-5 text-[oklch(87%_0_0)] transition-transform ${
             isLoading ? 'rotate-180' : ''
           }`} />
         </button>
@@ -301,84 +361,32 @@ const TypingIndicator = () => {
   );
 };
 
-// Add AnimationStyles component
-const AnimationStyles = () => {
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes fade-in {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
+// Add Suggestions component
+const Suggestions = ({ onSelect }: { onSelect: (text: string) => void }) => {
+  const suggestions = [
+    "Tell me about quantum computing",
+    "Write a poem about space",
+    "Explain blockchain technology",
+    "Design a recipe for pasta"
+  ];
 
-      .animate-fade-in {
-        animation: fade-in 0.3s ease-out forwards;
-      }
-
-      @keyframes pulse-ring {
-        0% {
-          transform: scale(0.8);
-          opacity: 0.5;
-        }
-        50% {
-          transform: scale(1);
-          opacity: 1;
-        }
-        100% {
-          transform: scale(0.8);
-          opacity: 0.5;
-        }
-      }
-
-      .animate-pulse-ring {
-        animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-      }
-
-      @keyframes pulse-soft {
-        0%, 100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.7;
-        }
-      }
-
-      .animate-pulse-soft {
-        animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-      }
-
-      @keyframes progress-indeterminate {
-        0% {
-          transform: translateX(-100%);
-        }
-        50% {
-          transform: translateX(0%);
-        }
-        100% {
-          transform: translateX(100%);
-        }
-      }
-
-      .animate-progress-indeterminate {
-        animation: progress-indeterminate 2s ease-in-out infinite;
-        background-size: 200% 100%;
-        background-position: 0 0;
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
-  return null;
+  return (
+    <div className="flex gap-2 items-center flex-wrap">
+      {suggestions.map((suggestion, index) => (
+        <React.Fragment key={suggestion}>
+          <button
+            onClick={() => onSelect(suggestion)}
+            className="text-[oklch(55.6%_0_0)] hover:text-[oklch(87%_0_0)] transition-colors"
+          >
+            {suggestion}
+          </button>
+          {index < suggestions.length - 1 && (
+            <span className="text-[oklch(55.6%_0_0)]">•</span>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
 };
 
 export default function Home() {
@@ -387,7 +395,6 @@ export default function Home() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>('groq');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const marqueeRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -482,138 +489,135 @@ export default function Home() {
     setMessages([]);
   };
 
-  return (
-    <div className="flex h-screen overflow-hidden bg-[oklch(14.5%_0_0)] text-[oklch(98.5%_0_0)]">
-      <AnimationStyles />
-      <div className="w-full max-w-3xl mx-auto flex flex-col h-full p-4 overflow-hidden">
-        <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          {messages.length > 0 && (
-            <button
-              onClick={clearChat}
-              className="flex items-center gap-2 text-[oklch(70.8%_0_0)] hover:text-[oklch(87%_0_0)] transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span>Back</span>
-            </button>
-          )}
-        </div>
+  const handleSuggestionClick = (text: string) => {
+    if (!isLoading) {
+      handleSendMessage(text);
+    }
+  };
 
-        {messages.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
-            <div className="space-y-4 text-center mb-8">
-              <h1 className="text-4xl font-medium">Fix your problems with AI</h1>
-              <p className="text-[oklch(70.8%_0_0)] text-lg">Chat with AI models until the credit runs out</p>
-            </div>
-            
-            <div className="w-full max-w-xl">
-              <ChatInput 
-                onSend={handleSendMessage}
-                isLoading={isLoading}
-                selectedModel={selectedModel}
-                onModelSelect={setSelectedModel}
-              />
+  return (
+    <div className="flex flex-col h-screen overflow-hidden bg-[oklch(14.5%_0_0)] text-[oklch(98.5%_0_0)]">
+      <Navbar />
+      <div className="flex-1 overflow-hidden">
+        <div className="w-full max-w-3xl mx-auto flex flex-col h-full p-4 overflow-hidden">
+          <div className="flex items-center justify-between mb-4 flex-shrink-0">
+            {messages.length > 0 && (
+              <button
+                onClick={clearChat}
+                className="flex items-center gap-2 text-[oklch(70.8%_0_0)] hover:text-[oklch(87%_0_0)] transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+                <span>Back</span>
+              </button>
+            )}
+          </div>
+
+          {messages.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
+              <div className="space-y-4 text-center mb-8">
+                <h1 className="text-4xl font-medium">Fix your problems with AI</h1>
+                <p className="text-[oklch(70.8%_0_0)] text-lg">Chat with AI models until the credit runs out</p>
+              </div>
               
-              <div className="mt-4 overflow-hidden">
-                <div 
-                  ref={marqueeRef}
-                  className="whitespace-nowrap animate-marquee text-[oklch(55.6%_0_0)] text-sm"
-                >
-                  Try &quot;Tell me about quantum computing&quot; • &quot;Write a poem about space&quot; • &quot;Explain blockchain technology&quot; • &quot;Design a recipe for pasta&quot;
+              <div className="w-full max-w-xl">
+                <ChatInput 
+                  onSend={handleSendMessage}
+                  isLoading={isLoading}
+                  selectedModel={selectedModel}
+                  onModelSelect={setSelectedModel}
+                  disabled={false}
+                />
+                
+                <div className="mt-4 overflow-hidden">
+                  <Suggestions onSelect={handleSuggestionClick} />
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex-1 overflow-y-auto mb-4 space-y-4 pr-2 min-h-0">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex items-start gap-3 animate-fade-in ${
-                    message.role === 'assistant' ? 'bg-[oklch(20.5%_0_0)] rounded-2xl p-4' : ''
-                  }`}
-                >
-                  <div className={`flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-lg ${
-                    message.role === 'assistant' 
-                      ? 'bg-[oklch(26.9%_0_0)]' 
-                      : 'bg-[oklch(26.9%_0_0)]'
-                  }`}>
-                    {message.role === 'assistant' ? (
-                      <Bot className="h-5 w-5 text-[oklch(87%_0_0)]" />
-                    ) : (
-                      <User className="h-5 w-5 text-[oklch(87%_0_0)]" />
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-2 overflow-hidden group">
-                    <div className="flex flex-col gap-2 w-full">
-                      <div className="flex-1 overflow-x-auto">
-                        {processMessageContent(message.content).map((part, index) => (
-                          part.type === 'code' ? (
-                            <div key={index} className="my-2 rounded-lg overflow-hidden relative group/code">
-                              <div className="bg-[oklch(26.9%_0_0)] px-4 py-2 text-sm text-[oklch(70.8%_0_0)] border-b border-[oklch(37.1%_0_0)] flex justify-between items-center">
-                                <span>{part.language}</span>
-                                <button
-                                  onClick={() => copyToClipboard(part.content)}
-                                  className="opacity-0 group-hover/code:opacity-100 transition-opacity p-1 hover:bg-[oklch(31%_0_0)] rounded"
-                                  title="Copy code"
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </button>
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto mb-4 space-y-4 pr-2 min-h-0">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex items-start gap-3 animate-fade-in ${
+                      message.role === 'assistant' ? 'bg-[oklch(20.5%_0_0)] rounded-2xl p-4' : ''
+                    }`}
+                  >
+                    <div className={`flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-lg ${
+                      message.role === 'assistant' 
+                        ? 'bg-[oklch(26.9%_0_0)]' 
+                        : 'bg-[oklch(26.9%_0_0)]'
+                    }`}>
+                      {message.role === 'assistant' ? (
+                        <Bot className="h-5 w-5 text-[oklch(87%_0_0)]" />
+                      ) : (
+                        <User className="h-5 w-5 text-[oklch(87%_0_0)]" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2 overflow-hidden group">
+                      <div className="flex flex-col gap-2 w-full">
+                        <div className="flex-1 overflow-x-auto">
+                          {processMessageContent(message.content).map((part, index) => (
+                            part.type === 'code' ? (
+                              <div key={index} className="my-2 rounded-lg overflow-hidden relative group/code">
+                                <div className="bg-[oklch(26.9%_0_0)] px-4 py-2 text-sm text-[oklch(70.8%_0_0)] border-b border-[oklch(37.1%_0_0)] flex justify-between items-center">
+                                  <span>{part.language}</span>
+                                  <button
+                                    onClick={() => copyToClipboard(part.content)}
+                                    className="opacity-0 group-hover/code:opacity-100 transition-opacity p-1 hover:bg-[oklch(31%_0_0)] rounded"
+                                    title="Copy code"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                  <SyntaxHighlighter
+                                    language={part.language}
+                                    style={oneDark}
+                                    customStyle={{
+                                      margin: 0,
+                                      background: 'oklch(26.9% 0 0)',
+                                      padding: '1rem',
+                                    }}
+                                  >
+                                    {part.content}
+                                  </SyntaxHighlighter>
+                                </div>
                               </div>
-                              <div className="overflow-x-auto">
-                                <SyntaxHighlighter
-                                  language={part.language}
-                                  style={oneDark}
-                                  customStyle={{
-                                    margin: 0,
-                                    background: 'oklch(26.9% 0 0)',
-                                    padding: '1rem',
-                                  }}
-                                >
-                                  {part.content}
-                                </SyntaxHighlighter>
-                              </div>
-                            </div>
-                          ) : (
-                            <p key={index} className="text-base leading-relaxed whitespace-pre-wrap overflow-x-auto">{part.content}</p>
-                          )
-                        ))}
+                            ) : (
+                              <p key={index} className="text-base leading-relaxed whitespace-pre-wrap overflow-x-auto">{part.content}</p>
+                            )
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => handleCopyMessage(message.content, message.id)}
+                          className={`self-end shrink-0 p-1 rounded hover:bg-[oklch(26.9%_0_0)] transition-colors ${
+                            copiedId === message.id ? 'text-green-500' : 'text-[oklch(70.8%_0_0)] opacity-0 group-hover:opacity-100'
+                          }`}
+                          aria-label="Copy full message"
+                          title="Copy full message"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleCopyMessage(message.content, message.id)}
-                        className={`self-end shrink-0 p-1 rounded hover:bg-[oklch(26.9%_0_0)] transition-colors ${
-                          copiedId === message.id ? 'text-green-500' : 'text-[oklch(70.8%_0_0)] opacity-0 group-hover:opacity-100'
-                        }`}
-                        aria-label="Copy full message"
-                        title="Copy full message"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
-              {isLoading && <TypingIndicator />}
-              <div ref={messagesEndRef} />
-            </div>
-            <div className="flex-shrink-0">
-              <ChatInput 
-                onSend={handleSendMessage}
-                isLoading={isLoading}
-                selectedModel={selectedModel}
-                onModelSelect={setSelectedModel}
-              />
-            </div>
-          </>
-        )}
-
-        {messages.length === 0 && (
-          <div className="flex items-center gap-2 mt-8 text-[oklch(55.6%_0_0)] text-sm flex-shrink-0">
-            <span>02:38 PM</span>
-            <span>•</span>
-            <span>Tue, May 20</span>
-          </div>
-        )}
+                ))}
+                {isLoading && <TypingIndicator />}
+                <div ref={messagesEndRef} />
+              </div>
+              <div className="flex-shrink-0">
+                <ChatInput 
+                  onSend={handleSendMessage}
+                  isLoading={isLoading}
+                  selectedModel={selectedModel}
+                  onModelSelect={setSelectedModel}
+                  disabled={true}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
