@@ -118,35 +118,38 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
- 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
- 
-    --primary: 142 76% 36%;
-    --primary-foreground: 355 100% 100%;
- 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
- 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
- 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
- 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
- 
-    --radius: 0.5rem;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 85%;
+    
+    --terminal-green: 120 100% 40%;
+    --terminal-cursor: 120 100% 70%;
+    
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 85%;
+    
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 85%;
+    
+    --primary: 120 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 85%;
+    
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 60%;
+    
+    --accent: 120 100% 40%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 100% 40%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 120 100% 40%;
+    
+    --radius: 0px;
   }
  
   .light {
@@ -185,20 +188,83 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
   }
+}
+
+/* Terminal-style blinking cursor */
+.terminal-cursor::after {
+  content: "_";
+  animation: cursor 1s infinite;
+  color: hsl(var(--terminal-cursor));
+  font-weight: bold;
+}
+
+@keyframes cursor {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Terminal window styling */
+.terminal-window {
+  @apply bg-card border border-border rounded-none;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.1);
+}
+
+.terminal-header {
+  @apply bg-muted text-muted-foreground px-4 py-2 border-b border-border flex items-center;
+}
+
+.terminal-body {
+  @apply p-4 font-mono;
+}
+
+/* Terminal text styles */
+.terminal-prompt::before {
+  content: "$ ";
+  color: hsl(var(--terminal-green));
+}
+
+.terminal-output {
+  @apply text-foreground whitespace-pre-wrap break-all;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--terminal-green));
+}
+
+/* Code block styling */
+.prose pre {
+  @apply bg-muted border-border rounded-none;
+}
+
+.prose code {
+  @apply bg-muted text-primary rounded-none px-1;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 
 .prose {
   max-width: none !important;
 }
 
-.prose pre {
-  @apply bg-muted/50 border rounded-lg;
-}
-
-.prose code {
-  @apply bg-muted/50 border rounded-lg px-1.5 py-0.5;
+.prose pre code {
+  @apply text-foreground;
 }
 
 .prose code::before,
@@ -207,11 +273,11 @@
 }
 
 .prose img {
-  @apply rounded-lg border;
+  @apply rounded-none border-border;
 }
 
 .prose :where(h1, h2, h3, h4) {
-  @apply text-foreground font-bold;
+  @apply text-primary font-bold;
 }
 
 .prose :where(a) {
@@ -219,11 +285,11 @@
 }
 
 .prose strong {
-  @apply font-bold;
+  @apply font-bold text-primary;
 }
 
 .prose blockquote {
-  @apply border-l-4 border-border;
+  @apply border-l-2 border-primary;
 }
 
 @keyframes marquee {
