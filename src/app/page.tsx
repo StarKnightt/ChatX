@@ -1,24 +1,13 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowUp, Globe, User, Bot, ArrowLeft, Copy, ChevronDown } from 'lucide-react';
-import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
-import oneDark from 'react-syntax-highlighter/dist/cjs/styles/prism/one-dark';
-
-interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  model?: string;
-}
-
-interface ChatInputProps {
-  onSend: (content: string) => Promise<void>;
-  isLoading: boolean;
-  selectedModel: string;
-  onModelSelect: (model: string) => void;
-  disabled: boolean;
-}
+import { Bot, ChevronDown, Trash2, ChevronLeft, Keyboard, Menu, Command, Globe } from 'lucide-react';
+import { ChatNavigator } from '@/components/ChatNavigator';
+import { ChatMessage } from '@/components/ChatMessage';
+import { ChatInput } from '@/components/ChatInput';
+import { useChatStore } from '@/store/chatStore';
+import { CommandMenu } from '@/components/CommandMenu';
 
 // Helper function to detect code blocks
 const processMessageContent = (content: string) => {
@@ -139,7 +128,7 @@ const ModelSelector = ({ selectedModel, onSelect, isLoading, disabled }: {
 
   const models = [
     { id: 'groq', name: 'Llama 3.3 70B', description: 'Versatile large language model' },
-    { id: 'gemini', name: 'Gemini Pro', description: 'Google\'s advanced AI model' }
+    { id: 'gemini', name: 'Gemini 1.5 flash', description: 'Google\'s advanced AI model' }
   ];
 
   const selectedModelName = models.find(m => m.id === selectedModel)?.name || 'Select Model';
@@ -214,147 +203,43 @@ const ModelSelector = ({ selectedModel, onSelect, isLoading, disabled }: {
   );
 };
 
-// Update ChatInput to pass disabled state
-const ChatInput = ({ onSend, isLoading, selectedModel, onModelSelect, disabled }: ChatInputProps & { disabled: boolean }) => {
-  const [question, setQuestion] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const adjustTextareaHeight = () => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
-    }
-  };
-
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setQuestion(e.target.value);
-    adjustTextareaHeight();
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (question.trim() && !isLoading) {
-      await onSend(question.trim());
-      setQuestion('');
-      if (textareaRef.current) {
-        textareaRef.current.style.height = '40px';
-      }
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-  };
-
-  useEffect(() => {
-    adjustTextareaHeight();
-  }, [question]);
-
-  return (
-    <form onSubmit={handleSubmit} className="w-full relative">
-      <textarea
-        ref={textareaRef}
-        value={question}
-        onChange={handleInput}
-        onKeyDown={handleKeyPress}
-        placeholder="Ask a question..."
-        rows={1}
-        disabled={isLoading}
-        className="border-input placeholder:text-[oklch(55.6%_0_0)] focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex field-sizing-content w-full rounded-[0.625rem] border border-[oklch(37.1%_0_0)] bg-[oklch(20.5%_0_0)] px-4 py-4 text-base leading-relaxed text-[oklch(97%_0_0)] shadow-xs transition-all outline-none touch-manipulation disabled:opacity-50 focus:border-[oklch(55.6%_0_0)] hover:border-[oklch(43.9%_0_0)]"
-        style={{
-          userSelect: 'text',
-          resize: 'none',
-          minHeight: '40px',
-          maxHeight: '200px',
-          paddingRight: '48px',
-          paddingBottom: '64px'
-        }}
-      />
-      
-      <div className="absolute left-3 right-3 bottom-3 flex items-center justify-between">
-        <ModelSelector 
-          selectedModel={selectedModel} 
-          onSelect={onModelSelect}
-          isLoading={isLoading}
-          disabled={disabled}
-        />
-        
-        <button 
-          type="submit"
-          disabled={isLoading || !question.trim()}
-          className={`p-2 rounded-[0.625rem] bg-[oklch(26.9%_0_0)] hover:bg-[oklch(37.1%_0_0)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[oklch(26.9%_0_0)] ${
-            isLoading ? 'animate-pulse-soft' : ''
-          }`}
-          aria-label="Send message"
-        >
-          <ArrowUp className={`h-5 w-5 text-[oklch(87%_0_0)] transition-transform ${
-            isLoading ? 'rotate-180' : ''
-          }`} />
-        </button>
-      </div>
-    </form>
-  );
-};
-
-// Add reasoning states
+// Update the reasoningStates array
 const reasoningStates = [
-  "Reading your message",
-  "Processing context",
-  "Analyzing information",
-  "Formulating response",
-  "Reviewing answer"
+  "Initializing connection...",
+  "Processing input...",
+  "Computing response...",
+  "Generating output...",
+  "Formatting response..."
 ];
 
-// Enhanced TypingIndicator with reasoning states
+// Update the TypingIndicator component
 const TypingIndicator = () => {
   const [reasoningIndex, setReasoningIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
+  const [dots, setDots] = useState('');
 
   useEffect(() => {
     const reasoningInterval = setInterval(() => {
       setReasoningIndex((prev) => (prev + 1) % reasoningStates.length);
     }, 2000);
 
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) return 0;
-        return prev + 1;
-      });
-    }, 50);
+    const dotsInterval = setInterval(() => {
+      setDots(prev => prev.length >= 3 ? '' : prev + '.');
+    }, 500);
 
     return () => {
       clearInterval(reasoningInterval);
-      clearInterval(progressInterval);
+      clearInterval(dotsInterval);
     };
   }, []);
 
   return (
-    <div className="flex flex-col gap-3 bg-[oklch(20.5%_0_0)] rounded-2xl p-4 animate-fade-in">
-      <div className="flex items-start gap-3">
-        <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-lg bg-[oklch(26.9%_0_0)]">
-          <Bot className="h-5 w-5 text-[oklch(87%_0_0)]" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[oklch(70.8%_0_0)] text-sm">
-              {reasoningStates[reasoningIndex]}
-            </span>
-            <div className="flex space-x-1">
-              <div className="h-2 w-2 rounded-full bg-[oklch(70.8%_0_0)] animate-bounce [animation-delay:-0.3s]"></div>
-              <div className="h-2 w-2 rounded-full bg-[oklch(70.8%_0_0)] animate-bounce [animation-delay:-0.15s]"></div>
-              <div className="h-2 w-2 rounded-full bg-[oklch(70.8%_0_0)] animate-bounce"></div>
-            </div>
-          </div>
-          <div className="w-full h-1 bg-[oklch(26.9%_0_0)] rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-[oklch(70.8%_0.2_280)] to-[oklch(70.8%_0.2_320)] animate-progress-indeterminate"
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
+    <div className="flex items-start gap-3">
+      <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center text-primary">
+        <Bot className="h-5 w-5" />
+      </div>
+      <div className="flex-1 font-mono">
+        <div className="terminal-prompt text-muted-foreground">
+          {reasoningStates[reasoningIndex]}{dots}
         </div>
       </div>
     </div>
@@ -390,11 +275,38 @@ const Suggestions = ({ onSelect }: { onSelect: (text: string) => void }) => {
 };
 
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const {
+    messages,
+    isLoading,
+    setLoading,
+    addMessage,
+    currentSessionId,
+    createNewSession,
+    sessions,
+    deleteSession
+  } = useChatStore();
+  
+  const [mounted, setMounted] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('groq');
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCommandMenu, setShowCommandMenu] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Create new chat on load if no current session
+  useEffect(() => {
+    if (mounted && !currentSessionId) {
+      createNewSession();
+    }
+  }, [currentSessionId, createNewSession, mounted]);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -420,16 +332,42 @@ export default function Home() {
     }
   }, [isLoading]);
 
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const newWidth = e.clientX;
+      if (newWidth > 160 && newWidth < 480) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
   const handleSendMessage = async (content: string) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
+    if (!content.trim()) return;
+
+    const userMessage = {
       content,
-      role: 'user',
+      role: 'user' as const,
     };
 
     try {
-      setMessages(prev => [...prev, userMessage]);
-      setIsLoading(true);
+      addMessage(userMessage);
+      setLoading(true);
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -454,171 +392,298 @@ export default function Home() {
         throw new Error('Invalid response format from API');
       }
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      const assistantMessage = {
         content: data.content.replace(/\*/g, ''),
-        role: 'assistant',
-        model: data.model
+        role: 'assistant' as const,
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      addMessage(assistantMessage);
     } catch (error) {
       console.error('Error:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      addMessage({
         content: error instanceof Error ? error.message : 'Sorry, I encountered an error. Please try again.',
-        role: 'assistant',
-      };
-      setMessages(prev => [...prev, errorMessage]);
+        role: 'assistant' as const,
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleCopyMessage = async (content: string, id: string) => {
-    try {
-      await navigator.clipboard.writeText(content);
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
+  // Add keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + / to toggle sidebar
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        setIsSidebarCollapsed(!isSidebarCollapsed);
+      }
+      // Ctrl/Cmd + K for command menu
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandMenu(true);
+      }
+      // Esc to collapse sidebar
+      if (e.key === 'Escape' && !isSidebarCollapsed) {
+        setIsSidebarCollapsed(true);
+      }
+    };
 
-  const clearChat = () => {
-    setMessages([]);
-  };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [isSidebarCollapsed]);
 
-  const handleSuggestionClick = (text: string) => {
-    if (!isLoading) {
-      handleSendMessage(text);
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[oklch(14.5%_0_0)] text-[oklch(98.5%_0_0)]">
-      <Navbar />
-      <div className="flex-1 overflow-hidden">
-        <div className="w-full max-w-3xl mx-auto flex flex-col h-full p-4 overflow-hidden">
-          <div className="flex items-center justify-between mb-4 flex-shrink-0">
-            {messages.length > 0 && (
-              <button
-                onClick={clearChat}
-                className="flex items-center gap-2 text-[oklch(70.8%_0_0)] hover:text-[oklch(87%_0_0)] transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                <span>Back</span>
-              </button>
-            )}
-          </div>
-
-          {messages.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
-              <div className="space-y-4 text-center mb-8">
-                <h1 className="text-4xl font-medium">Fix your problems with AI</h1>
-                <p className="text-[oklch(70.8%_0_0)] text-lg">Chat with AI models until the credit runs out</p>
-              </div>
-              
-              <div className="w-full max-w-xl">
-                <ChatInput 
-                  onSend={handleSendMessage}
-                  isLoading={isLoading}
-                  selectedModel={selectedModel}
-                  onModelSelect={setSelectedModel}
-                  disabled={false}
-                />
-                
-                <div className="mt-4 overflow-hidden">
-                  <Suggestions onSelect={handleSuggestionClick} />
-                </div>
-              </div>
+  const ShortcutsDialog = () => (
+    <div className={`fixed inset-0 bg-background/80 backdrop-blur-sm z-50 ${showShortcuts ? 'flex' : 'hidden'}`}>
+      <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
+        <div className="flex flex-col space-y-2">
+          <h2 className="text-lg font-semibold">Keyboard Shortcuts</h2>
+          <div className="grid gap-4">
+            <div className="flex items-center justify-between">
+              <span>Command Menu</span>
+              <kbd className="px-2 py-1 text-xs font-mono bg-muted rounded">Ctrl + K</kbd>
             </div>
-          ) : (
-            <>
-              <div className="flex-1 overflow-y-auto mb-4 space-y-4 pr-2 min-h-0">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex items-start gap-3 animate-fade-in ${
-                      message.role === 'assistant' ? 'bg-[oklch(20.5%_0_0)] rounded-2xl p-4' : ''
-                    }`}
-                  >
-                    <div className={`flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-lg ${
-                      message.role === 'assistant' 
-                        ? 'bg-[oklch(26.9%_0_0)]' 
-                        : 'bg-[oklch(26.9%_0_0)]'
-                    }`}>
-                      {message.role === 'assistant' ? (
-                        <Bot className="h-5 w-5 text-[oklch(87%_0_0)]" />
-                      ) : (
-                        <User className="h-5 w-5 text-[oklch(87%_0_0)]" />
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-2 overflow-hidden group">
-                      <div className="flex flex-col gap-2 w-full">
-                        <div className="flex-1 overflow-x-auto">
-                          {processMessageContent(message.content).map((part, index) => (
-                            part.type === 'code' ? (
-                              <div key={index} className="my-2 rounded-lg overflow-hidden relative group/code">
-                                <div className="bg-[oklch(26.9%_0_0)] px-4 py-2 text-sm text-[oklch(70.8%_0_0)] border-b border-[oklch(37.1%_0_0)] flex justify-between items-center">
-                                  <span>{part.language}</span>
-                                  <button
-                                    onClick={() => copyToClipboard(part.content)}
-                                    className="opacity-0 group-hover/code:opacity-100 transition-opacity p-1 hover:bg-[oklch(31%_0_0)] rounded"
-                                    title="Copy code"
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                  </button>
-                                </div>
-                                <div className="overflow-x-auto">
-                                  <SyntaxHighlighter
-                                    language={part.language}
-                                    style={oneDark}
-                                    customStyle={{
-                                      margin: 0,
-                                      background: 'oklch(26.9% 0 0)',
-                                      padding: '1rem',
-                                    }}
-                                  >
-                                    {part.content}
-                                  </SyntaxHighlighter>
-                                </div>
-                              </div>
-                            ) : (
-                              <p key={index} className="text-base leading-relaxed whitespace-pre-wrap overflow-x-auto">{part.content}</p>
-                            )
-                          ))}
-                        </div>
-                        <button
-                          onClick={() => handleCopyMessage(message.content, message.id)}
-                          className={`self-end shrink-0 p-1 rounded hover:bg-[oklch(26.9%_0_0)] transition-colors ${
-                            copiedId === message.id ? 'text-green-500' : 'text-[oklch(70.8%_0_0)] opacity-0 group-hover:opacity-100'
-                          }`}
-                          aria-label="Copy full message"
-                          title="Copy full message"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {isLoading && <TypingIndicator />}
-                <div ref={messagesEndRef} />
-              </div>
-              <div className="flex-shrink-0">
-                <ChatInput 
-                  onSend={handleSendMessage}
-                  isLoading={isLoading}
-                  selectedModel={selectedModel}
-                  onModelSelect={setSelectedModel}
-                  disabled={true}
-                />
-              </div>
-            </>
-          )}
+            <div className="flex items-center justify-between">
+              <span>Toggle Sidebar</span>
+              <kbd className="px-2 py-1 text-xs font-mono bg-muted rounded">Ctrl + /</kbd>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Close Sidebar</span>
+              <kbd className="px-2 py-1 text-xs font-mono bg-muted rounded">Esc</kbd>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Send Message</span>
+              <kbd className="px-2 py-1 text-xs font-mono bg-muted rounded">Enter</kbd>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowShortcuts(false)}
+            className="px-3 py-2 text-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-sm"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
+  );
+
+  // Delete all chats confirmation dialog
+  const DeleteConfirmDialog = () => (
+    <div className={`fixed inset-0 bg-background/80 backdrop-blur-sm z-50 ${showDeleteConfirm ? 'flex' : 'hidden'}`}>
+      <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
+        <div className="flex flex-col space-y-2">
+          <h2 className="text-lg font-semibold text-destructive">Delete All Chats</h2>
+          <p className="text-sm text-muted-foreground">Are you sure you want to delete all chats? This action cannot be undone.</p>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="px-3 py-2 text-sm hover:bg-muted rounded-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              sessions.forEach(session => deleteSession(session.id));
+              setShowDeleteConfirm(false);
+            }}
+            className="px-3 py-2 text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-sm"
+          >
+            Delete All
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const handleNewChat = () => {
+    createNewSession();
+  };
+
+  if (!mounted) {
+    return (
+      <div className="flex h-full">
+        <div className="w-80 border-r border-border">
+          <div className="animate-pulse bg-card h-full" />
+        </div>
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-black">
+          <div className="terminal-header flex items-center justify-between px-3 py-1 bg-muted/10 border-b border-border/20">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-destructive/70"></div>
+                <div className="h-2.5 w-2.5 rounded-full bg-primary/70"></div>
+                <div className="h-2.5 w-2.5 rounded-full bg-accent/70"></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>dev@chatx:~</span>
+              <span className="text-primary">$</span>
+            </div>
+            <div className="w-8"></div>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <div className="animate-pulse bg-muted/5 h-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <DeleteConfirmDialog />
+      <ShortcutsDialog />
+      <CommandMenu 
+        open={showCommandMenu}
+        onOpenChange={setShowCommandMenu}
+        onCreateNewChat={handleNewChat}
+        onShowShortcuts={() => setShowShortcuts(true)}
+        onDeleteAllChats={() => setShowDeleteConfirm(true)}
+      />
+      <div className="flex h-full">
+        {/* Collapsible Chat Navigator */}
+        <div 
+          ref={sidebarRef}
+          style={{ width: isSidebarCollapsed ? '0px' : `${sidebarWidth}px` }}
+          className="relative flex-shrink-0 transition-all duration-500 ease-in-out overflow-hidden border-r border-border"
+        >
+          <div className="h-full">
+            <ChatNavigator />
+          </div>
+          
+          {/* Resize Handle */}
+          <div
+            className="absolute top-0 right-0 w-1 h-full cursor-col-resize bg-border hover:bg-primary/50 transition-colors"
+            onMouseDown={() => setIsResizing(true)}
+          />
+        </div>
+
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-black">
+          {/* Terminal Title Bar */}
+          <div className="terminal-header flex items-center justify-between px-3 py-1 bg-muted/10 border-b border-border/20">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                title={isSidebarCollapsed ? "Open Sidebar (Ctrl + /)" : "Close Sidebar (Ctrl + /)"}
+              >
+                {isSidebarCollapsed ? (
+                  <Menu className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4" />
+                )}
+              </button>
+              <div className="flex gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-destructive/70"></div>
+                <div className="h-2.5 w-2.5 rounded-full bg-primary/70"></div>
+                <div className="h-2.5 w-2.5 rounded-full bg-accent/70"></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>dev@chatx:~</span>
+              <span className="text-primary">$</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCommandMenu(true)}
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                title="Command Menu (Ctrl + K)"
+              >
+                <Command className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                title="Delete All Chats"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setShowShortcuts(true)}
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                title="Keyboard Shortcuts"
+              >
+                <Keyboard className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-hidden">
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col">
+                <div className="flex-1 flex flex-col items-center justify-center p-4">
+                  <div className="space-y-6 text-center">
+                    <pre className="hidden md:block text-primary text-sm font-mono leading-none">
+{`
+ ██████╗██╗  ██╗ █████╗ ████████╗██╗  ██╗
+██╔════╝██║  ██║██╔══██╗╚══██╔══╝╚██╗██╔╝
+██║     ███████║███████║   ██║    ╚███╔╝ 
+██║     ██╔══██║██╔══██║   ██║    ██╔██╗ 
+╚██████╗██║  ██║██║  ██║   ██║   ██╔╝ ██╗
+ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
+`}
+                    </pre>
+                    <div className="space-y-2">
+                      <p className="text-primary/80 text-sm">Welcome to ChatX CLI!</p>
+                      <p className="text-muted-foreground text-xs">chat until credit runs out</p>
+                    </div>
+                  </div>
+                  <div className="w-full max-w-2xl px-4 mt-8">
+                    <ChatInput 
+                      onSend={handleSendMessage}
+                      isLoading={isLoading}
+                      selectedModel={selectedModel}
+                      onModelSelect={setSelectedModel}
+                      disabled={false}
+                      hasMessages={false}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col">
+                <div className="flex-1 overflow-y-auto">
+                  <div className="min-h-full p-4 space-y-4">
+                    {messages.map((message) => (
+                      <ChatMessage key={message.id} message={message} />
+                    ))}
+                    {isLoading && <TypingIndicator />}
+                  </div>
+                  <div ref={messagesEndRef} />
+                </div>
+                <div className="flex-shrink-0">
+                  <ChatInput 
+                    onSend={handleSendMessage}
+                    isLoading={isLoading}
+                    selectedModel={selectedModel}
+                    onModelSelect={setSelectedModel}
+                    disabled={false}
+                    hasMessages={true}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Terminal Status Bar */}
+          <div className="px-3 py-1.5 border-t border-border/20 bg-muted/10">
+            <div className="flex items-center justify-between text-xs text-muted-foreground/60">
+              <div className="flex items-center gap-2">
+                <span>{selectedModel === 'groq' ? 'llama-3.3-70b' : 'gemini-pro'}</span>
+                <span>•</span>
+                <span>{messages.length} messages</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>utf-8</span>
+                <span>•</span>
+                <span>terminal</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

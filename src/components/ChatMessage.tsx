@@ -1,8 +1,6 @@
 import { Message } from '@/types/chat';
-import { Bot, Copy, User, Check } from 'lucide-react';
+import { Bot, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from './ui/button';
-import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -24,106 +22,112 @@ export function ChatMessage({ message }: ChatMessageProps) {
     }
   };
 
+  const formatTimestamp = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString('en-US', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
   return (
-    <div className={cn(
-      "flex gap-4 p-4 rounded-xl",
-      message.role === 'assistant' ? "bg-muted/50" : "bg-transparent"
-    )}>
-      <div className="flex-shrink-0">
+    <div className="group space-y-2 px-4 py-2">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span>[{formatTimestamp(message.timestamp)}]</span>
         {message.role === 'assistant' ? (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-            <Bot className="h-5 w-5 text-primary" />
-          </div>
+          <span className="flex items-center gap-1">
+            <Bot className="h-3 w-3" />
+            system@chat
+          </span>
         ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-            <User className="h-5 w-5 text-muted-foreground" />
-          </div>
+          <span className="flex items-center gap-1">
+            <span className="text-primary">$</span>
+            user@chat
+          </span>
         )}
       </div>
-      <div className="flex-1 space-y-2">
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown
-            components={{
-              code({ className, children, ...props }) {
-                const match = /language-(\w+)/.exec(className || '');
-                const isInline = !className?.includes('language-');
-                const codeString = String(children).replace(/\n$/, '');
 
-                if (!isInline && match) {
-                  return (
-                    <div className="relative group">
-                      <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 bg-background/50 backdrop-blur-sm"
-                          onClick={() => copyToClipboard(codeString)}
-                        >
-                          {copied ? (
-                            <Check className="h-4 w-4" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <SyntaxHighlighter
-                        language={match[1]}
-                        style={oneDark}
-                        customStyle={{
-                          margin: 0,
-                          borderRadius: '0.75rem',
-                          padding: '1rem',
-                          backgroundColor: 'hsl(var(--muted))',
-                        }}
-                      >
-                        {codeString}
-                      </SyntaxHighlighter>
-                    </div>
-                  );
-                }
+      <div className="prose prose-invert max-w-none pl-4">
+        <ReactMarkdown
+          components={{
+            code({ className, children, ...props }) {
+              const match = /language-(\w+)/.exec(className || '');
+              const isInline = !className?.includes('language-');
+              const codeString = String(children).replace(/\n$/, '');
+
+              if (!isInline && match) {
                 return (
-                  <code className="rounded-md bg-muted px-1.5 py-0.5" {...props}>
-                    {children}
-                  </code>
+                  <div className="group/code relative">
+                    <div className="flex items-center justify-between bg-muted/10 px-4 py-1 text-xs text-muted-foreground/60">
+                      <span>{match[1]}</span>
+                      <button
+                        onClick={() => copyToClipboard(codeString)}
+                        className="opacity-0 group-hover/code:opacity-100 transition-opacity hover:text-primary cursor-pointer"
+                      >
+                        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    </div>
+                    <SyntaxHighlighter
+                      language={match[1]}
+                      style={oneDark}
+                      customStyle={{
+                        margin: 0,
+                        background: 'var(--muted)',
+                        padding: '1rem',
+                        fontSize: '0.875rem',
+                        fontFamily: '"JetBrains Mono", monospace',
+                        borderRadius: 0,
+                      }}
+                    >
+                      {codeString}
+                    </SyntaxHighlighter>
+                  </div>
                 );
-              },
-              p: ({ children }) => (
-                <p className="leading-7">{children}</p>
-              ),
-              ul: ({ children }) => (
-                <ul className="my-6 ml-6 list-disc [&>li]:mt-2">{children}</ul>
-              ),
-              ol: ({ children }) => (
-                <ol className="my-6 ml-6 list-decimal [&>li]:mt-2">{children}</ol>
-              ),
-              blockquote: ({ children }) => (
-                <blockquote className="mt-6 border-l-2 pl-6 italic">{children}</blockquote>
-              ),
-            }}
-          >
-            {message.content}
-          </ReactMarkdown>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => copyToClipboard(message.content)}
-          >
-            {copied ? (
-              <>
-                <Check className="mr-1 h-3 w-3" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Copy className="mr-1 h-3 w-3" />
-                Copy
-              </>
-            )}
-          </Button>
-        </div>
+              }
+              return (
+                <code className="bg-muted/10 px-1.5 py-0.5 text-primary font-mono rounded-none" {...props}>
+                  {children}
+                </code>
+              );
+            },
+            p: ({ children }) => (
+              <p className="my-2 leading-relaxed">{children}</p>
+            ),
+            ul: ({ children }) => (
+              <ul className="list-disc pl-4 space-y-1">{children}</ul>
+            ),
+            ol: ({ children }) => (
+              <ol className="list-decimal pl-4 space-y-1">{children}</ol>
+            ),
+            blockquote: ({ children }) => (
+              <blockquote className="border-l-2 border-primary pl-4 italic">{children}</blockquote>
+            ),
+          }}
+        >
+          {message.content}
+        </ReactMarkdown>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => copyToClipboard(message.content)}
+          className={`text-xs ${
+            copied ? 'text-primary' : 'text-muted-foreground/60 opacity-0 group-hover:opacity-100'
+          } transition-colors hover:text-primary cursor-pointer`}
+        >
+          {copied ? (
+            <span className="flex items-center gap-1">
+              <Check className="h-3 w-3" />
+              Copied to clipboard
+            </span>
+          ) : (
+            <span className="flex items-center gap-1">
+              <Copy className="h-3 w-3" />
+              Copy output
+            </span>
+          )}
+        </button>
       </div>
     </div>
   );

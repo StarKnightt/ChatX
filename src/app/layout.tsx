@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const inter = Inter({ subsets: ["latin"] });
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ChatX",
-  description: "ChatX is a chat application that allows you to chat with your friends and family.",
+  title: "X chat",
+  description: "A terminal-based chat interface",
 };
 
 export default function RootLayout({
@@ -17,14 +17,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={jetbrainsMono.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
-          enableSystem
+          enableSystem={false}
           disableTransitionOnChange
         >
-          {children}
+          <div className="terminal-screen min-h-screen bg-black">
+            <div className="terminal-window h-screen border border-primary/20 bg-background shadow-[0_0_15px_rgba(0,255,0,0.1)]">
+              <div className="terminal-content h-screen">
+                {children}
+              </div>
+            </div>
+          </div>
         </ThemeProvider>
       </body>
     </html>
