@@ -32,6 +32,7 @@ export interface ChatStore extends ChatState {
   createNewSession: () => string;
   loadSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
+  deleteAllSessions: () => void;
   renameSession: (sessionId: string, newName: string) => void;
   getCurrentSession: () => ChatSession | undefined;
 } 
