@@ -1,8 +1,7 @@
 # ChatX
 
-A sleek, terminal-themed chat interface for AI interactions. Live at [chat-x-neon.vercel.app](https://chat-x-neon.vercel.app/)
+A sleek, terminal-themed chat interface for AI interactions. Live at [chat-x-neon.vercel.app](https://www.chatx0.tech/)
 
-![Terminal Theme](https://chat-x-neon.vercel.app/favicon.ico)
 
 ## Features
 
