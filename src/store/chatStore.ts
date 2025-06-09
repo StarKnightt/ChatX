@@ -89,13 +89,35 @@ export const useChatStore = create<ChatStore>()(
       },
 
       deleteSession: (sessionId: string) =>
-        set((state) => ({
-          sessions: state.sessions.filter(s => s.id !== sessionId),
-          ...(state.currentSessionId === sessionId ? {
-            currentSessionId: null,
-            messages: [],
-          } : {}),
-        })),
+        set((state) => {
+          const updatedSessions = state.sessions.filter(s => s.id !== sessionId);
+          const isCurrentSession = state.currentSessionId === sessionId;
+          const needsNewSession = updatedSessions.length === 0 || isCurrentSession;
+          
+          if (needsNewSession) {
+            const newSession: ChatSession = {
+              id: crypto.randomUUID(),
+              name: 'New Chat',
+              messages: [],
+              created: Date.now(),
+              lastUpdated: Date.now(),
+            };
+            
+            return {
+              sessions: [newSession, ...updatedSessions],
+              currentSessionId: newSession.id,
+              messages: [],
+            };
+          }
+          
+          return {
+            sessions: updatedSessions,
+            ...(isCurrentSession ? {
+              currentSessionId: updatedSessions[0]?.id || null,
+              messages: updatedSessions[0]?.messages || [],
+            } : {}),
+          };
+        }),
 
       renameSession: (sessionId: string, newName: string) =>
         set((state) => ({
@@ -107,6 +129,22 @@ export const useChatStore = create<ChatStore>()(
       getCurrentSession: () => {
         const state = get();
         return state.sessions.find(s => s.id === state.currentSessionId);
+      },
+
+      deleteAllSessions: () => {
+        const newSession: ChatSession = {
+          id: crypto.randomUUID(),
+          name: 'New Chat',
+          messages: [],
+          created: Date.now(),
+          lastUpdated: Date.now(),
+        };
+        
+        set({
+          sessions: [newSession],
+          currentSessionId: newSession.id,
+          messages: [],
+        });
       },
     }),
     {

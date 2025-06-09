@@ -33,7 +33,7 @@ A sleek, terminal-themed chat interface for AI interactions. Live at [chat-x-neo
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/chatx.git
+git clone https://github.com/StarKnightt/ChatX
 cd chatx
 ```
 

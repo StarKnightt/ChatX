@@ -283,7 +283,8 @@ export default function Home() {
     currentSessionId,
     createNewSession,
     sessions,
-    deleteSession
+    deleteSession,
+    deleteAllSessions
   } = useChatStore();
   
   const [mounted, setMounted] = useState(false);
@@ -485,7 +486,7 @@ export default function Home() {
           </button>
           <button
             onClick={() => {
-              sessions.forEach(session => deleteSession(session.id));
+              deleteAllSessions();
               setShowDeleteConfirm(false);
             }}
             className="px-3 py-2 text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-sm"
